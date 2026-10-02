@@ -17,7 +17,7 @@ An image-only, reproducible baseline for segmenting kidney, tumour and cyst in c
 | Class | Per-patient Dice [95% CI] | Global voxel Dice |
 |---|---|---|
 | Kidney | 0.879 [0.858, 0.897] | 0.879 |
-| Tumour | 0.433 [0.359, 0.501] | 0.673 |
+| Tumour | 0.433 [0.359, 0.501] | 0.672 |
 | Cyst | 0.219 [0.150, 0.297] | 0.434 |
 
 **Depth ablation (2.5D vs 2D):** +0.003 kidney Dice, +0.046 tumour Dice; 2.5D better on 47/74 patients for tumour.
