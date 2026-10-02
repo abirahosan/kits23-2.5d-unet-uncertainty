@@ -1,0 +1,5 @@
+class,global_dice,per_patient_mean,ci_low,ci_high
+background,0.9993,0.9993,0.9992,0.9994
+kidney,0.8789,0.8790,0.8580,0.8969
+tumour,0.6725,0.4327,0.3592,0.5014
+cyst,0.4339,0.2190,0.1496,0.2965
