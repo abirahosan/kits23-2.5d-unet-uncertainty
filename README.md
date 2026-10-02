@@ -71,3 +71,27 @@ Heller et al., KiTS23 dataset: https://github.com/neheller/kits23
 ## License
 
 Code: add a license of your choice (e.g. MIT). KiTS23 data is governed by its own license.
+
+## Figures
+
+Per-class test Dice (74 held-out patients):
+
+![Per-class test Dice](results/segmentation/Figure_4.2.jpeg)
+
+2D vs 2.5D depth ablation:
+
+![Depth ablation](results/ablation/Figure_4.6.jpeg)
+
+Cyst Dice vs cyst volume (Pearson r = 0.61):
+
+![Cyst Dice vs volume](results/segmentation/Figure_4.8.jpeg)
+
+MC Dropout calibration vs uncertainty threshold:
+
+![MC Dropout calibration](results/uncertainty/Figure_4.9.jpeg)
+
+Uncertainty heatmaps (tumour probability variance):
+
+![Uncertainty heatmaps](results/uncertainty/Figure_4.11.jpeg)
+
+All figures and CSV tables are in [`results/`](results/): `segmentation/`, `ablation/`, `uncertainty/`.
