@@ -8,37 +8,38 @@ An image-only, reproducible baseline for segmenting kidney, tumour and cyst in c
 
 - **Model:** 2D U-Net, 3-slice axial stack as 3 input channels, 7,763,140 params
 - **Training:** 40 epochs, 192x192 slices, HU windowing, per-volume z-score, foreground-biased slice sampling, seed 42
-- **Split:** deterministic patient-level 342 / 73 / 74 (train / val / test)
+- **Split:** deterministic patient-level 342 / 73 / 74 (train / val / test), stratified by tumour presence
 - **Uncertainty:** MC Dropout (p = 0.3, 20 passes)
 - **Hardware:** single NVIDIA A100 80GB (Google Colab)
 
 ## Results (74 held-out test patients)
 
-| Class | Per-patient Dice [95% CI] | Global voxel Dice |
+| Class | Per-patient Dice [95% CI] | Global voxel Dice (stride 12) |
 |---|---|---|
 | Kidney | 0.879 [0.858, 0.897] | 0.879 |
 | Tumour | 0.433 [0.359, 0.501] | 0.672 |
 | Cyst | 0.219 [0.150, 0.297] | 0.434 |
 
-**Depth ablation (2.5D vs 2D):** +0.003 kidney Dice, +0.046 tumour Dice; 2.5D better on 47/74 patients for tumour.
+Per-patient Dice is computed on **every** axial slice of each patient. Global voxel Dice and the confusion matrix use a stride of 12 (every 12th slice), so they are strided-sample estimates, not full-volume estimates. The two columns answer different questions and are not directly comparable.
 
-**Uncertainty:** RCC = 0.994 (well-calibrated confidence), error-detection AUC = 0.861 (predictive entropy). Thresholded uncertainty does not isolate errors (RIU < 0.05), so it is useful for *ranking* cases for review, not for hard thresholding.
+**Depth ablation (2.5D vs 2D, per-patient):** +0.003 kidney Dice, +0.046 tumour Dice; 2.5D better on 47/74 patients for tumour. The depth-1 model is trained inside the same notebook (cells `ABL0` to `ABL1-C10`); raw values are in `results/ablation/` (`ablation_summary.csv`, `ablation_per_class.csv`).
 
-**Cyst analysis:** Dice correlates with log cyst volume (Pearson r = 0.61, n = 42). Failure is mainly resolution and class imbalance, not purely architectural.
+**Uncertainty:** RCC_cal (reliability-confidence ratio) = 0.994, error-detection AUC = 0.861 (predictive entropy) and 0.749 (variance of tumour probability). Thresholded uncertainty does not isolate errors (RIU < 0.05), so it is useful for *ranking* cases for review, not for hard thresholding. (In `calibration_metrics.csv` the RCC_cal column is headed `RCC`.)
 
-**Negative result:** the KiTS23 `aua_risk_score` metadata field leaks the malignancy label (96% accuracy); removing it drops a downstream classifier to chance (AUC 0.53). Avoid it in any metadata-based classification.
+**Cyst analysis:** per-patient cyst Dice correlates with log cyst volume (Pearson r = 0.61, n = 42). Failure is mainly a resolution and class-imbalance limitation, not purely architectural.
 
 ## Repo layout
 
 ```
-kits23_segmentation_FINAL.ipynb   # full pipeline: preprocessing, training, ablation, MC Dropout, analysis
+kits23_segmentation_FINAL.ipynb   # preprocessing, 2.5D training, test eval, MC Dropout, analysis, 2D ablation
 splits/                           # patient-level train/val/test split files
-models/                           # trained checkpoints
-results/                          # tables and figures
+models/                           # trained checkpoints (unet2d_baseline.pth)
+results/                          # tables and figures: segmentation/, ablation/, uncertainty/
 requirements.txt
+LICENSE
 ```
 
-`data/` and `cache/` are git-ignored. KiTS23 volumes are never committed.
+`data/`, `cache/` and `seg_cache/` are git-ignored. KiTS23 volumes and cached slices are never committed.
 
 ## Setup
 
@@ -48,21 +49,29 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+`requirements.txt` pins `torch==2.11.0`; the model was trained under `2.11.0+cu128`. Install a CUDA-enabled build if training on GPU.
+
 ## Data
 
-Download KiTS23 from the official repository: https://github.com/neheller/kits23
+KiTS23 is publicly distributed:
 
-Place it under `data/` (git-ignored). Check the notebook's config cell for the expected path.
+- **Official repository:** https://github.com/neheller/kits23
+- **HuggingFace mirror used by the notebook:** https://huggingface.co/datasets/MedOtter/kits23 (imaging and segmentation files only)
+
+The notebook downloads the mirror itself (cell C1) into `DATASET_DIR`. The preprocessing cache is regenerated automatically on first run.
 
 ## Usage
 
-Open `kits23_segmentation_FINAL.ipynb` and run top to bottom. Training was done on a GPU (Colab A100); a smaller GPU will need a reduced batch size. The notebook builds the cached slices, trains the 2.5D model, retrains at depth 1 for the ablation, then runs MC Dropout and the cyst/metadata analyses.
+Open `kits23_segmentation_FINAL.ipynb` and run top to bottom. The notebook was written for **Google Colab**: it mounts Google Drive and uses `/content/...` paths, so edit the path cells (C0.5, C2) to run locally. Training was done on a Colab A100; a smaller GPU will need a reduced batch size. The notebook builds the cached slices, trains the 2.5D U-Net, evaluates on the 74-patient test split, runs MC Dropout with the calibration and cyst-volume analyses, and finally trains and compares the depth-1 (2D) model.
 
 ## Limitations
 
-- Image-only, single compact model; far smaller than the KiTS23 winning ensemble (15 models, ~5.5x10^9 params)
+- Image-only, single compact model; the KiTS23 winning solution is an ensemble of 15 models (10 SegResNet + 5 DiNTS) trained on an 8-GPU machine. Its Dice (0.835, averaged over three overlapping regions on the hidden test set) is not directly comparable to the per-class numbers here
 - Tumour and cyst per-patient Dice remain low; small lesions suffer at 192x192 resolution
 - Single split, single seed
+- Segmentation masks are resampled with bilinear interpolation plus rounding (not nearest-neighbour) to keep small lesions; the two modes were not compared
+- Global voxel Dice uses a stride of 12 (compute trade-off); per-patient Dice uses full volumes
+- MC Dropout layers are injected post-hoc after every ReLU, so the effective dropout rate is higher than the nominal p = 0.3. The effective rate was not measured; p = 0.3 is the configured value throughout
 
 ## Reference
 
@@ -70,7 +79,7 @@ Heller et al., KiTS23 dataset: https://github.com/neheller/kits23
 
 ## License
 
-Code: add a license of your choice (e.g. MIT). KiTS23 data is governed by its own license.
+Code: MIT (see `LICENSE`). KiTS23 data is governed by its own license and is not covered by this repository's license.
 
 ## Figures
 
@@ -99,7 +108,7 @@ All figures and CSV tables are in [`results/`](results/): `segmentation/`, `abla
 ## Reproducibility
 
 - **Splits:** `splits/{train,val,test}_ids.txt` hold the 342 / 73 / 74 patient IDs (70/15/15, stratified by tumour presence, seed 42).
-- **Weights:** `models/unet2d_baseline.pth` is the best-epoch 2.5D U-Net (3-channel input, 7,763,140 parameters). Load it with `model.load_state_dict(torch.load(path))`.
+- **Weights:** `models/unet2d_baseline.pth` is the best-epoch 2.5D U-Net (3-channel input, 7,763,140 parameters). Load it with `model.load_state_dict(torch.load(path))`. The depth-1 ablation model (7,762,564 parameters) is saved by the notebook as `model_final.pth` in its ablation output folder.
 - **Not in the repo:** KiTS23 volumes, cached slices, and the per-voxel MC Dropout outputs (about 4.7 GB compressed). Re-run the MC Dropout cells to regenerate them.
 - **Environment:** pinned in `requirements.txt` (versions from Google Colab, where the model was trained).
 
