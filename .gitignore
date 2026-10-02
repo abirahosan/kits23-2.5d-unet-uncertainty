@@ -1,0 +1,21 @@
+# Data - never commit KiTS23 volumes or cached files
+data/
+cache/
+*.nii
+*.nii.gz
+*.npz
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# macOS / editor
+.DS_Store
+.vscode/
+
+# Secrets
+.env
+*.key
