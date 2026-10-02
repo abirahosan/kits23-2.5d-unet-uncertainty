@@ -22,7 +22,7 @@ An image-only, reproducible baseline for segmenting kidney, tumour and cyst in c
 
 Per-patient Dice is computed on **every** axial slice of each patient. Global voxel Dice and the confusion matrix use a stride of 12 (every 12th slice), so they are strided-sample estimates, not full-volume estimates. The two columns answer different questions and are not directly comparable.
 
-**Depth ablation (2.5D vs 2D, per-patient):** +0.003 kidney Dice, +0.046 tumour Dice; 2.5D better on 47/74 patients for tumour. The depth-1 model is trained inside the same notebook (cells `ABL0` to `ABL1-C10`); raw values are in `results/ablation/` (`ablation_summary.csv`, `ablation_per_class.csv`).
+**Depth ablation (2.5D vs 2D, per-patient): +0.003 kidney Dice, +0.046 tumour Dice; 2.5D better on 47/74 patients for tumour. The depth-1 model is trained inside the same notebook, following the test evaluation section. Raw values are in results/ablation/ (ablation_summary.csv, ablation_per_class.csv).
 
 **Uncertainty:** RCC_cal (reliability-confidence ratio) = 0.994, error-detection AUC = 0.861 (predictive entropy) and 0.749 (variance of tumour probability). Thresholded uncertainty does not isolate errors (RIU < 0.05), so it is useful for *ranking* cases for review, not for hard thresholding. (In `calibration_metrics.csv` the RCC_cal column is headed `RCC`.)
 
@@ -62,7 +62,9 @@ The notebook downloads the mirror itself (cell C1) into `DATASET_DIR`. The prepr
 
 ## Usage
 
-Open `kits23_segmentation_FINAL.ipynb` and run top to bottom. The notebook was written for **Google Colab**: it mounts Google Drive and uses `/content/...` paths, so edit the path cells (C0.5, C2) to run locally. Training was done on a Colab A100; a smaller GPU will need a reduced batch size. The notebook builds the cached slices, trains the 2.5D U-Net, evaluates on the 74-patient test split, runs MC Dropout with the calibration and cyst-volume analyses, and finally trains and compares the depth-1 (2D) model.
+Open kits23_segmentation_FINAL.ipynb in Google Colab (it mounts Google Drive and uses /content/... paths; edit cells C0.5 and C2 to run locally). Training was done on a Colab A100; a smaller GPU will need a reduced batch size. The notebook builds the cached slices, trains the 2.5D U-Net, evaluates on the 74-patient test split, and runs MC Dropout.
+
+Note on running order: One intermediate MC-Dropout post-processing cell is not included in the exported notebook (see Reproducibility below). Cells C0–C11 and C13–C14 run as-is; cell C12 requires the missing intermediate step. All final calibration CSVs and figures are already present in results/, so the notebook does not need to be re-run to reproduce the numbers reported in the thesis.
 
 ## Limitations
 
@@ -109,7 +111,7 @@ All figures and CSV tables are in [`results/`](results/): `segmentation/`, `abla
 
 - **Splits:** `splits/{train,val,test}_ids.txt` hold the 342 / 73 / 74 patient IDs (70/15/15, stratified by tumour presence, seed 42).
 - **Weights:** `models/unet2d_baseline.pth` is the best-epoch 2.5D U-Net (3-channel input, 7,763,140 parameters). Load it with `model.load_state_dict(torch.load(path))`. The depth-1 ablation model (7,762,564 parameters) is saved by the notebook as `model_final.pth` in its ablation output folder.
-- **Not in the repo:** KiTS23 volumes, cached slices, and the per-voxel MC Dropout outputs (about 4.7 GB compressed). Re-run the MC Dropout cells to regenerate them.
+- **Not in the repo: KiTS23 volumes, cached slices, and the per-voxel MC Dropout outputs (about 4.7 GB compressed). The exported notebook contains the MC Dropout inference cell (C11) and the final calibration/AUC cells (C12–C13), but the intermediate cell that flattens mc_results into per-voxel arrays (all_var, all_correct, all_entropy, calib_rows) is not included. The final CSV outputs (calibration_metrics.csv, calibration_metrics.csv) are preserved in results/uncertainty/; regenerating them would require re-adding that intermediate step.
 - **Environment:** pinned in `requirements.txt` (versions from Google Colab, where the model was trained).
 
 ## Authors
