@@ -95,3 +95,10 @@ Uncertainty heatmaps (tumour probability variance):
 ![Uncertainty heatmaps](results/uncertainty/Figure_4.11.jpeg)
 
 All figures and CSV tables are in [`results/`](results/): `segmentation/`, `ablation/`, `uncertainty/`.
+
+## Reproducibility
+
+- **Splits:** `splits/{train,val,test}_ids.txt` hold the 342 / 73 / 74 patient IDs (70/15/15, stratified by tumour presence, seed 42).
+- **Weights:** `models/unet2d_baseline.pth` is the best-epoch 2.5D U-Net (3-channel input, 7,763,140 parameters). Load it with `model.load_state_dict(torch.load(path))`.
+- **Not in the repo:** KiTS23 volumes, cached slices, and the per-voxel MC Dropout outputs (about 4.7 GB compressed). Re-run the MC Dropout cells to regenerate them.
+- **Environment:** pinned in `requirements.txt` (versions from Google Colab, where the model was trained).
