@@ -102,3 +102,7 @@ All figures and CSV tables are in [`results/`](results/): `segmentation/`, `abla
 - **Weights:** `models/unet2d_baseline.pth` is the best-epoch 2.5D U-Net (3-channel input, 7,763,140 parameters). Load it with `model.load_state_dict(torch.load(path))`.
 - **Not in the repo:** KiTS23 volumes, cached slices, and the per-voxel MC Dropout outputs (about 4.7 GB compressed). Re-run the MC Dropout cells to regenerate them.
 - **Environment:** pinned in `requirements.txt` (versions from Google Colab, where the model was trained).
+
+## Authors
+
+Abdullah Al Noman, Md. Irfan Hossain, Abir Ahosan Ratul, Md. Fahim Siddiki. Supervisor: Supta Richard Philip, Department of Computer Science, AIUB.
